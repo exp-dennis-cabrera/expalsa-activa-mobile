@@ -21,7 +21,18 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       await login(email.trim(), password);
     } catch (err: any) {
-      const message = err?.response?.data?.message ?? 'Correo o contraseña incorrectos.';
+      // Distinguir NO PODER LLEGAR al servidor de credenciales malas: antes
+      // ambos casos decian "correo o contraseña incorrectos", y con el
+      // servidor caido o mal configurado uno se pasaba horas probando
+      // contraseñas que si eran correctas.
+      let message: string;
+      if (err?.response?.data?.message) {
+        message = err.response.data.message;
+      } else if (!err?.response) {
+        message = 'No se pudo conectar con el servidor. Revisa tu conexión o la dirección del servidor en Ajustes.';
+      } else {
+        message = 'Correo o contraseña incorrectos.';
+      }
       setError(message);
     } finally {
       setLoading(false);
@@ -31,9 +42,11 @@ export default function LoginScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.container}>
-        <Text variant="headlineMedium" style={styles.title}>
-          Expalsa Activa
-        </Text>
+        <Image
+          source={require('../../../assets/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text variant="bodyMedium" style={styles.subtitle}>
           Mantenimiento inteligente
         </Text>
@@ -73,7 +86,9 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, justifyContent: 'center', padding: 24 },
-  title: { textAlign: 'center', fontWeight: '700', color: '#5569ff' },
+  // El logo ocupa el lugar del titulo. La altura fija evita que salte
+  // mientras carga la imagen.
+  logo: { width: '80%', height: 90, alignSelf: 'center', marginBottom: 4 },
   subtitle: { textAlign: 'center', color: '#6B7280', marginBottom: 32 },
   input: { marginBottom: 12 },
   button: { marginTop: 8, paddingVertical: 4 },

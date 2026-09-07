@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity } from '
 import { Text, IconButton, Badge, Switch, Button, useTheme } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { meApi, type MobileOverview, type UserSettings } from '../api/me';
+import { useAuth } from '../context/AuthContext';
 
 // Misma logica que el real: cada estadistica lleva su propio filtro, y si
 // "solo asignadas a mi" esta activo, se le suma tambien ese filtro (igual
@@ -19,6 +20,7 @@ function statParams(key: string, settings: UserSettings | null) {
 
 export default function HomeScreen({ navigation }: any) {
   const theme = useTheme() as any;
+  const { hasViewPermission } = useAuth();
   const [overview, setOverview] = useState<MobileOverview | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -91,15 +93,25 @@ export default function HomeScreen({ navigation }: any) {
       }
     >
       <View style={styles.iconRow}>
-        <IconButton style={iconButtonStyle} icon="magnify-scan" onPress={() => navigation.navigate('ScanAsset')} />
-        <IconButton style={iconButtonStyle} icon="poll" onPress={() => navigation.navigate('WorkOrdersTab')} />
+        {/* Igual que el real: escanear y activos solo se muestran si el rol
+            tiene permiso de ver Activos. */}
+        {hasViewPermission('ASSETS') && (
+          <IconButton style={iconButtonStyle} icon="magnify-scan" onPress={() => navigation.navigate('ScanAsset')} />
+        )}
+        <IconButton style={iconButtonStyle} icon="poll" onPress={() => navigation.navigate('WorkOrderStats')} />
         <View style={[iconButtonStyle, styles.notifWrapper]}>
-          <IconButton icon="bell-outline" onPress={() => {}} />
+          <IconButton icon="bell-outline" onPress={() => navigation.navigate('Notifications')} />
           <Badge style={[styles.badge, { backgroundColor: theme.colors.error }]} visible={unreadCount > 0}>
             {unreadCount}
           </Badge>
         </View>
-        <IconButton style={iconButtonStyle} icon="package-variant-closed" onPress={() => {}} />
+        {hasViewPermission('ASSETS') && (
+          <IconButton
+            style={iconButtonStyle}
+            icon="package-variant-closed"
+            onPress={() => navigation.navigate('Assets')}
+          />
+        )}
       </View>
 
       <View style={styles.toggleRow}>

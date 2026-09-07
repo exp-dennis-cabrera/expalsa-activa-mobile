@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, TextInput as RNTextInput, Pressable, Modal, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, TextInput as RNTextInput, Pressable, Modal, Alert, Image } from 'react-native';
 import { Text, ActivityIndicator, Button, Checkbox, IconButton, useTheme, List, FAB } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { useMentions } from 'react-native-controlled-mentions';
@@ -107,7 +107,7 @@ function durationToHours(durationSeconds: number): string {
 export default function WorkOrderDetailScreen({ route, navigation }: any) {
   const { id } = route.params;
   const theme = useTheme();
-  const { userId } = useAuth();
+  const { userId, hasEditPermission } = useAuth();
 
   // Igual que getStatusColor() real (utils/overall.ts).
   const STATUS_COLORS: Record<WorkOrderStatus, string> = {
@@ -403,8 +403,17 @@ export default function WorkOrderDetailScreen({ route, navigation }: any) {
           )}
         </View>
 
+        {/* Igual que el real: la imagen de la orden se muestra destacada y
+            centrada, y al tocarla se abre en grande. */}
+        {wo.imageUrl && (
+          <TouchableOpacity onPress={() => setViewingImageIndex(0)} style={{ alignItems: 'center', marginTop: 16 }}>
+            <Image source={{ uri: wo.imageUrl }} style={{ width: '100%', height: 250, borderRadius: 5 }} resizeMode="cover" />
+          </TouchableOpacity>
+        )}
+
         <View style={{ marginTop: 20 }}>
         <TouchableOpacity
+          disabled={!hasEditPermission('WORK_ORDERS', { createdById: wo.createdById, assignedUserIds: wo.primaryAssigneeId ? [wo.primaryAssigneeId] : [] })}
           style={[styles.statusField, { borderColor: STATUS_COLORS[wo.status] }]}
           onPress={() => setStatusMenuOpen(true)}
         >
@@ -650,15 +659,18 @@ export default function WorkOrderDetailScreen({ route, navigation }: any) {
 
       {/* FAB flotante del cronometro -- igual que el real: el label muestra
           el tiempo EN VIVO si esta corriendo, o el acumulado del usuario
-          si no. Es propio de cada usuario, no una suma de todos. */}
-      <FAB
-        icon={myRunningLog ? 'stop' : 'play'}
-        label={myRunningLog ? liveLabel : durationToHours(myStoppedSeconds)}
-        disabled={controllingTime}
-        color="white"
-        style={[styles.fab, { backgroundColor: myRunningLog ? theme.colors.error : theme.colors.primary }]}
-        onPress={handleTimerToggle}
-      />
+          si no. Es propio de cada usuario, no una suma de todos. Se oculta
+          del todo si no tenés permiso de editar esta orden, igual que el real. */}
+      {hasEditPermission('WORK_ORDERS', { createdById: wo.createdById, assignedUserIds: wo.primaryAssigneeId ? [wo.primaryAssigneeId] : [] }) && (
+        <FAB
+          icon={myRunningLog ? 'stop' : 'play'}
+          label={myRunningLog ? liveLabel : durationToHours(myStoppedSeconds)}
+          disabled={controllingTime}
+          color="white"
+          style={[styles.fab, { backgroundColor: myRunningLog ? theme.colors.error : theme.colors.primary }]}
+          onPress={handleTimerToggle}
+        />
+      )}
     </View>
   );
 }

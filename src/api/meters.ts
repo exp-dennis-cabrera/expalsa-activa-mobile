@@ -16,12 +16,15 @@ export interface Meter {
   lastReadingDate: string | null;
   nextReadingDue: string | null;
   pastDue: boolean;
+  /** AL_DIA | PENDIENTE | INCUMPLIDO -- estado de la lectura del turno. */
+  readingStatus: 'AL_DIA' | 'PENDIENTE' | 'INCUMPLIDO';
   assetId: number | null;
   assetName: string | null;
   locationId: number | null;
   locationName: string | null;
   categoryId: number | null;
   categoryName: string | null;
+  createdById: number | null;
   createdByName: string | null;
   assignedUserIds: number[];
   assignedUserNames: string[];

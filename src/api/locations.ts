@@ -43,12 +43,19 @@ export interface UploadedFile {
 export const locationsApi = {
   list: async (page = 0, size = 20, search?: string): Promise<{ content: Location[]; totalPages: number }> => {
     const client = await getApiClient();
-    const { data } = await client.get('/locations', { params: { page, size, search } });
+    const { data } = await client.get('/locations/search', { params: { page, size, search } });
     return { content: Array.isArray(data?.content) ? data.content : [], totalPages: data?.totalPages ?? 0 };
   },
   hierarchy: async (): Promise<Location[]> => {
     const client = await getApiClient();
     const { data } = await client.get('/locations/hierarchy');
+    return Array.isArray(data) ? data : [];
+  },
+  // Igual patron real: id=0 trae las ubicaciones raiz, cualquier otro id
+  // trae sus hijos directos -- se pide nivel por nivel, no todo de una vez.
+  children: async (parentId: number): Promise<Location[]> => {
+    const client = await getApiClient();
+    const { data } = await client.get(`/locations/children/${parentId}`);
     return Array.isArray(data) ? data : [];
   },
   getById: async (id: number): Promise<Location> => {
@@ -63,7 +70,7 @@ export const locationsApi = {
   },
   update: async (id: number, payload: CreateLocationPayload): Promise<Location> => {
     const client = await getApiClient();
-    const { data } = await client.put(`/locations/${id}`, payload);
+    const { data } = await client.patch(`/locations/${id}`, payload);
     return data;
   },
   delete: async (id: number): Promise<void> => {

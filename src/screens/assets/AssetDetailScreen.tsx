@@ -177,7 +177,7 @@ export default function AssetDetailScreen({ navigation, route }: any) {
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [tabs] = useState([
     { key: 'details', title: 'Detalles' },
-    { key: 'work-orders', title: 'Órdenes' },
+    { key: 'work-orders', title: 'Órdenes de trabajo' },
     { key: 'files', title: 'Archivos' },
     { key: 'parts', title: 'Repuestos' },
   ]);

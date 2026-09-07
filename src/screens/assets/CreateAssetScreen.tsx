@@ -135,7 +135,9 @@ export default function CreateAssetScreen({ navigation, route }: Props) {
         area: area.trim() || undefined,
         barCode: barCode.trim() || undefined,
         nfcId: nfcId.trim() || undefined,
-        acquisitionCost: acquisitionCost ? Number(acquisitionCost) : undefined,
+        // Se acepta coma como separador decimal: el teclado numerico de
+        // Android la ofrece, y Number("1,5") daria NaN.
+        acquisitionCost: acquisitionCost ? Number(acquisitionCost.replace(',', '.')) : undefined,
         additionalInfos: additionalInfos.trim() || undefined,
         inServiceDate: inServiceDate ? inServiceDate.toISOString().slice(0, 10) : undefined,
         warrantyExpirationDate: warrantyExpirationDate ? warrantyExpirationDate.toISOString().slice(0, 10) : undefined,

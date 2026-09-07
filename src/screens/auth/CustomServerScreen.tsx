@@ -32,8 +32,8 @@ export default function CustomServerScreen() {
         Servidor
       </Text>
       <Text variant="bodySmall" style={styles.description}>
-        Si tu empresa aloja su propio servidor de Expalsa Activa, poné la dirección acá. Si no sabés qué es esto,
-        dejalo como está.
+        Si tu empresa aloja su propio servidor de Expalsa Activa, pon la dirección aquí. Si no sabes qué es esto,
+        déjalo como está.
       </Text>
 
       <TextInput

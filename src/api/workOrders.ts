@@ -111,6 +111,14 @@ export interface AdvancedFilters {
   completedAtTo?: string;
 }
 
+/** Igual que FilterField del backend: una condicion de filtro. */
+export interface FilterField {
+  field: string;
+  operation: string;
+  value?: unknown;
+  values?: unknown[];
+}
+
 export const workOrdersApi = {
   list: async (page = 0, size = 20, filters: WorkOrderListFilters = {}): Promise<PageResponse<WorkOrder>> => {
     const client = await getApiClient();
@@ -120,9 +128,45 @@ export const workOrdersApi = {
     });
     return data;
   },
+  /**
+   * El backend ahora espera SearchCriteria (mismo formato que Atlas CMMS):
+   * una lista de condiciones con campo, operacion y valor, en vez de
+   * filtros con nombre fijo. Esta funcion traduce los filtros de la
+   * pantalla a ese formato.
+   */
   search: async (page: number, size: number, filters: WorkOrderListFilters & AdvancedFilters): Promise<PageResponse<WorkOrder>> => {
     const client = await getApiClient();
-    const { data } = await client.post<PageResponse<WorkOrder>>('/work-orders/search', filters, { params: { page, size } });
+    const filterFields: FilterField[] = [];
+
+    if (filters.status?.length) {
+      filterFields.push({ field: 'status', operation: 'in', values: filters.status });
+    }
+    if (filters.priority?.length) {
+      filterFields.push({ field: 'priority', operation: 'in', values: filters.priority });
+    }
+    if (filters.search) {
+      filterFields.push({ field: 'title', operation: 'cn', value: filters.search });
+    }
+    if (filters.assignedToUserId) {
+      filterFields.push({ field: 'primaryAssignee', operation: 'eq', value: filters.assignedToUserId });
+    }
+    if (filters.assetId) {
+      filterFields.push({ field: 'asset', operation: 'eq', value: filters.assetId });
+    }
+    if (filters.locationId) {
+      filterFields.push({ field: 'location', operation: 'eq', value: filters.locationId });
+    }
+    if (filters.categoryId) {
+      filterFields.push({ field: 'category', operation: 'eq', value: filters.categoryId });
+    }
+
+    const { data } = await client.post<PageResponse<WorkOrder>>('/work-orders/search', {
+      filterFields,
+      pageNum: page,
+      pageSize: size,
+      sortField: 'createdAt',
+      direction: 'DESC',
+    });
     return data;
   },
   getById: async (id: number): Promise<WorkOrder> => {

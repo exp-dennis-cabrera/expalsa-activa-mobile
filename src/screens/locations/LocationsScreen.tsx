@@ -57,24 +57,23 @@ export default function LocationsScreen({ navigation }: any) {
   const [view, setView] = useState<'hierarchy' | 'list'>('hierarchy');
   const [search, setSearch] = useState('');
   const [flatLocations, setFlatLocations] = useState<Location[]>([]);
-  const [hierarchyLocations, setHierarchyLocations] = useState<Location[]>([]);
-  const [currentParentId, setCurrentParentId] = useState<number | null>(null);
+  const [currentLevelLocations, setCurrentLevelLocations] = useState<Location[]>([]);
+  const [levelStack, setLevelStack] = useState<{ id: number; name: string }[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const currentParentId = levelStack.length ? levelStack[levelStack.length - 1].id : 0;
 
   const load = useCallback(() => {
     setLoadError(null);
     if (view === 'list') {
       locationsApi.list(0, 50, search || undefined).then((r) => setFlatLocations(r.content)).catch((err) => setLoadError(err?.message ?? 'Error cargando la lista.'));
     } else {
-      locationsApi.hierarchy().then(setHierarchyLocations).catch((err) => setLoadError(err?.message ?? 'Error cargando la jerarquía.'));
+      locationsApi.children(currentParentId).then(setCurrentLevelLocations).catch((err) => setLoadError(err?.message ?? 'Error cargando la jerarquía.'));
     }
-  }, [view, search]);
+  }, [view, search, currentParentId]);
 
   useFocusEffect(load);
-
-  const currentLevelLocations = hierarchyLocations.filter((l) => l.parentLocationId === currentParentId);
-  const hasChildren = (locationId: number) => hierarchyLocations.some((l) => l.parentLocationId === locationId);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -96,6 +95,11 @@ export default function LocationsScreen({ navigation }: any) {
           { value: 'list', label: 'Lista', icon: 'format-list-bulleted' },
         ]}
       />
+      {view === 'hierarchy' && levelStack.length > 0 && (
+        <Button icon="arrow-left" onPress={() => setLevelStack((prev) => prev.slice(0, -1))} style={{ alignSelf: 'flex-start', marginLeft: 8 }}>
+          {levelStack[levelStack.length - 1].name}
+        </Button>
+      )}
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}
@@ -126,8 +130,8 @@ export default function LocationsScreen({ navigation }: any) {
               key={location.id}
               location={location}
               navigation={navigation}
-              showChildrenButton={hasChildren(location.id)}
-              onViewChildren={() => setCurrentParentId(location.id)}
+              showChildrenButton
+              onViewChildren={() => setLevelStack((prev) => [...prev, { id: location.id, name: location.name }])}
             />
           ))
         )}

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
-import { Text, Searchbar, Avatar, Chip, Button, SegmentedButtons, useTheme } from 'react-native-paper';
+import { Text, Searchbar, Avatar, Chip, Button, SegmentedButtons, Icon, useTheme } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { assetsApi, type Asset, type AssetStatus } from '../../api/assets';
 
@@ -68,9 +68,13 @@ function AssetCard({
               </Chip>
             </View>
             {asset.locationName && (
-              <Text variant="bodySmall" style={{ color: theme.colors.grey ?? 'grey', marginTop: 4 }}>
-                📍 {asset.locationName}
-              </Text>
+              // Igual que IconWithLabel real: icono de mapa + nombre, no un emoji.
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                <Icon source="map-marker-outline" size={16} color={theme.colors.grey ?? 'grey'} />
+                <Text variant="bodySmall" style={{ color: theme.colors.grey ?? 'grey', marginLeft: 4 }}>
+                  {asset.locationName}
+                </Text>
+              </View>
             )}
             {showChildrenButton && (
               <View style={styles.cardFooter}>

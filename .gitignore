@@ -9,6 +9,15 @@ web-build/
 *.mobileprovision
 .env
 .env.local
-android/app/build/
-ios/build/
+
+# Proyectos nativos: EAS los borra y recrea en cada prebuild
+# ("The android project is malformed, project files will be cleared"),
+# asi que versionarlos no sirve de nada.
+android/
+ios/
+
+# Credenciales de Firebase Cloud Messaging.
+# En CI se reconstruye desde GOOGLE_SERVICES_BASE64 (ver app.config.ts).
+google-services.json
+
 .DS_Store

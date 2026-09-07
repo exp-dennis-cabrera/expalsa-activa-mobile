@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, Modal, Alert, Image, TouchableOpacity } f
 import { Text, TextInput, Button, IconButton, useTheme } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { metersApi, type Meter, type MeterTrigger, type MeterReading } from '../../api/meters';
+import { useAuth } from '../../context/AuthContext';
 
 function BasicField({ label, value }: { label: string; value: string | number | null | undefined }) {
   if (!value && value !== 0) return null;
@@ -19,12 +20,13 @@ function BasicField({ label, value }: { label: string; value: string | number | 
 export default function MeterDetailScreen({ navigation, route }: any) {
   const { id } = route.params;
   const theme = useTheme();
+  const { hasDeletePermission } = useAuth();
   const [meter, setMeter] = useState<Meter | null>(null);
   const [triggers, setTriggers] = useState<MeterTrigger[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [readingValue, setReadingValue] = useState('0');
+  const [readingValue, setReadingValue] = useState('');
   const [editingReading, setEditingReading] = useState<MeterReading | null>(null);
-  const [editReadingValue, setEditReadingValue] = useState('0');
+  const [editReadingValue, setEditReadingValue] = useState('');
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,13 +46,26 @@ export default function MeterDetailScreen({ navigation, route }: any) {
   }, [navigation, meter]);
 
   async function handleAddReading() {
+    // Antes se usaba "parseFloat(x) || 0": si el campo estaba vacio o el
+    // texto no era un numero, se guardaba 0 SIN AVISAR. Eso ensucia el
+    // historico y arruina el calculo de consumo (una lectura en 0 genera
+    // un consumo negativo enorme al dia siguiente).
+    const valor = parseFloat(readingValue.replace(',', '.'));
+    if (!readingValue.trim() || Number.isNaN(valor)) {
+      setError('Escribe un valor numérico para la lectura.');
+      return;
+    }
+    if (valor < 0) {
+      setError('La lectura no puede ser negativa.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      const updated = await metersApi.addReading(id, parseFloat(readingValue) || 0);
+      const updated = await metersApi.addReading(id, valor);
       setMeter(updated);
       setAddModalOpen(false);
-      setReadingValue('0');
+      setReadingValue('');
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'No se pudo registrar la lectura.');
     } finally {
@@ -62,7 +77,13 @@ export default function MeterDetailScreen({ navigation, route }: any) {
     if (!editingReading) return;
     setSubmitting(true);
     try {
-      const updated = await metersApi.updateReading(editingReading.id, parseFloat(editReadingValue) || 0);
+      const valorEditado = parseFloat(editReadingValue.replace(',', '.'));
+      if (!editReadingValue.trim() || Number.isNaN(valorEditado) || valorEditado < 0) {
+        setError('Escribe un valor numérico válido.');
+        setSubmitting(false);
+        return;
+      }
+      const updated = await metersApi.updateReading(editingReading.id, valorEditado);
       setMeter(updated);
       setEditingReading(null);
     } finally {
@@ -71,7 +92,7 @@ export default function MeterDetailScreen({ navigation, route }: any) {
   }
 
   function handleDeleteReading(readingId: number) {
-    Alert.alert('Eliminar lectura', '¿Seguro que querés eliminar esta lectura?', [
+    Alert.alert('Eliminar lectura', '¿Seguro que quieres eliminar esta lectura?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -172,16 +193,22 @@ export default function MeterDetailScreen({ navigation, route }: any) {
             </Text>
           </View>
           <View style={{ flexDirection: 'row' }}>
-            <IconButton
-              icon="pencil"
-              iconColor={theme.colors.primary}
-              size={20}
-              onPress={() => {
-                setEditReadingValue(String(reading.value));
-                setEditingReading(reading);
-              }}
-            />
-            <IconButton icon="delete-outline" iconColor={theme.colors.error} size={20} onPress={() => handleDeleteReading(reading.id)} />
+            {/* Mismo permiso que borrar: corregir una lectura reescribe el
+                consumo historico, asi que lo hace un supervisor. */}
+            {hasDeletePermission('METERS', { createdById: meter.createdById }) && (
+              <IconButton
+                icon="pencil"
+                iconColor={theme.colors.primary}
+                size={20}
+                onPress={() => {
+                  setEditReadingValue(String(reading.value));
+                  setEditingReading(reading);
+                }}
+              />
+            )}
+            {hasDeletePermission('METERS', { createdById: meter.createdById }) && (
+              <IconButton icon="delete-outline" iconColor={theme.colors.error} size={20} onPress={() => handleDeleteReading(reading.id)} />
+            )}
           </View>
         </View>
       ))}
@@ -193,11 +220,32 @@ export default function MeterDetailScreen({ navigation, route }: any) {
             <Text variant="titleMedium" style={{ marginBottom: 12 }}>
               Agregar lectura
             </Text>
-            <TextInput mode="outlined" label="Lectura" value={readingValue} onChangeText={setReadingValue} keyboardType="numeric" />
+            {/* El teclado de Samsung ignora decimal-pad y numeric: muestra
+                solo digitos. El boton "," inserta el separador sin depender
+                del teclado del fabricante. */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TextInput
+                mode="outlined"
+                label="Lectura"
+                value={readingValue}
+                onChangeText={setReadingValue}
+                keyboardType="numeric"
+                disabled={submitting}
+                style={{ flex: 1 }}
+              />
+              <Button
+                mode="outlined"
+                compact
+                disabled={submitting || readingValue.includes(',') || readingValue.includes('.')}
+                onPress={() => setReadingValue((v) => v + ',')}
+              >
+                ,
+              </Button>
+            </View>
             {error && <Text style={{ color: theme.colors.error, marginTop: 8 }}>{error}</Text>}
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
               <Button onPress={() => setAddModalOpen(false)}>Cancelar</Button>
-              <Button mode="contained" onPress={handleAddReading} loading={submitting}>
+              <Button mode="contained" onPress={handleAddReading} loading={submitting} disabled={submitting}>
                 Agregar
               </Button>
             </View>
@@ -212,10 +260,28 @@ export default function MeterDetailScreen({ navigation, route }: any) {
             <Text variant="titleMedium" style={{ marginBottom: 12 }}>
               Editar lectura
             </Text>
-            <TextInput mode="outlined" label="Lectura" value={editReadingValue} onChangeText={setEditReadingValue} keyboardType="numeric" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TextInput
+                mode="outlined"
+                label="Lectura"
+                value={editReadingValue}
+                onChangeText={setEditReadingValue}
+                keyboardType="numeric"
+                disabled={submitting}
+                style={{ flex: 1 }}
+              />
+              <Button
+                mode="outlined"
+                compact
+                disabled={submitting || editReadingValue.includes(',') || editReadingValue.includes('.')}
+                onPress={() => setEditReadingValue((v) => v + ',')}
+              >
+                ,
+              </Button>
+            </View>
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
               <Button onPress={() => setEditingReading(null)}>Cancelar</Button>
-              <Button mode="contained" onPress={handleEditReading} loading={submitting}>
+              <Button mode="contained" onPress={handleEditReading} loading={submitting} disabled={submitting}>
                 Guardar
               </Button>
             </View>

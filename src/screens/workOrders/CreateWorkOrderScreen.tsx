@@ -143,7 +143,10 @@ export default function CreateWorkOrderScreen({ navigation, route }: Props) {
         categoryId: categoryId ?? undefined,
         dueDate: dueDate?.toISOString(),
         estimatedStartDate: estimatedStartDate?.toISOString(),
-        estimatedDurationMinutes: estimatedDurationHours ? Number(estimatedDurationHours) * 60 : undefined,
+        // Coma como separador decimal, igual que en el resto de la app.
+        estimatedDurationMinutes: estimatedDurationHours
+          ? Number(estimatedDurationHours.replace(',', '.')) * 60
+          : undefined,
         requiresSignature,
         primaryAssigneeId: primaryAssigneeId ?? undefined,
         additionalAssigneeIds: additionalAssigneeIds.length ? additionalAssigneeIds : undefined,

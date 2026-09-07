@@ -13,7 +13,7 @@ export default function ScanAssetScreen({ navigation }: any) {
   }
 
   function handleNotFound(identifier: { nfcId?: string; barCode?: string }) {
-    Alert.alert('Error', 'No se encontró ningún activo con ese código. ¿Querés crear uno nuevo?', [
+    Alert.alert('Error', 'No se encontró ningún activo con ese código. ¿Quieres crear uno nuevo?', [
       { text: 'No', onPress: () => navigation.goBack() },
       { text: 'Sí', onPress: () => navigation.replace('AddAsset', { presetIdentifier: identifier }) },
     ]);
